@@ -215,5 +215,5 @@ export class GallerySectionComponent {
   shown = computed(() => (this.limit ? this.list().slice(0, this.limit) : this.list()));
   @ViewChild('dlg') dlg!: ElementRef<HTMLDialogElement>;
   constructor() { this.content.start(); }
-  show(g: GalleryImage) { this.cur.set(g); this.dlg.nativeElement.showModal(); }
+  show(g: GalleryImage) { this.cur.set(g); this.dlg.nativeElement.showModal(); void this.content.full(g).then((s) => { if (this.cur() === g && s !== g.src) this.cur.set({ ...g, src: s }); }); }
 }

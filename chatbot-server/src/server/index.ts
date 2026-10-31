@@ -5,8 +5,6 @@ import { resolve } from "node:path";
 import cors from "cors";
 import { kbSize } from "./rag/retriever.js";
 import { admin } from "./admin.js";
-import { publicApi } from "./public.js";
-import { startContentLoading } from "./content/store.js";
 import { answer } from "./answer.js";
 import { firebaseConfigured } from "./firebase.js";
 import { startLoading, cacheSize } from "./kb/store.js";
@@ -18,7 +16,6 @@ import { geminiTts } from "./tts.js";
 const app = express();
 app.use(cors({ origin: process.env.ALLOWED_ORIGIN ?? "*" }));
 app.use("/api/admin", admin);
-app.use("/api", publicApi);                 // news / gallery / images for the public website              // has its own (bigger) JSON limit for file uploads
 app.use(express.json({ limit: "50kb" }));
 
 // tiny in-memory rate limit: 20 req/min per IP
@@ -75,6 +72,5 @@ if (staticDir && existsSync(staticDir)) {
 
 const port = Number(process.env.PORT ?? 8787);
 app.listen(port, () => console.log(`Devotion chatbot API on :${port}`));
-if (firebaseConfigured()) startContentLoading().then(() => console.log("Website content loaded")).catch((e) => console.error("Content load failed:", e.message));
 if (firebaseConfigured()) startLoading().then(() => console.log(`Firestore knowledge loaded: ${cacheSize()} passages`)).catch((e) => console.error("Firestore load failed:", e.message));
 else console.warn("Firebase not configured - uploaded knowledge and admin panel are disabled (see FIREBASE_SETUP.md).");

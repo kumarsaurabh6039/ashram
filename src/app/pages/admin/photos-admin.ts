@@ -34,7 +34,7 @@ import { SiteContentService } from '../../core/content.service';
   <div class="pg">
     @for (p of list(); track p.id) {
       <figure class="pc">
-        <img [src]="ad.mediaUrl(p.mediaId)" [alt]="p.caption || p.category" loading="lazy">
+        <img [src]="p.thumb ?? ''" [alt]="p.caption || p.category" loading="lazy">
         <figcaption>
           <select aria-label="Category" (change)="recat(p, $any($event.target).value)">@for (c of cats; track c) { <option [value]="c" [selected]="c === p.category">{{ c }}</option> }</select>
           <input type="text" maxlength="160" placeholder="Caption likhein" aria-label="Caption" [value]="p.caption" (change)="recap(p, $any($event.target).value)">
@@ -74,7 +74,7 @@ export class PhotosAdminComponent implements OnInit {
     this.busy.set(true); this.done.set(0); this.errs.set([]); this.msg.set('');
     let ok = 0;
     for (const f of fs) {
-      try { const id = await this.ad.uploadImage(f); await this.ad.addPhoto(id, this.caption(), this.cat()); ok++; }
+      try { await this.ad.uploadPhoto(f, this.caption(), this.cat()); ok++; }
       catch (e) { this.errs.update((x) => [...x, (e as Error).message.startsWith(f.name) ? (e as Error).message : `${f.name}: ${(e as Error).message}`]); }
       this.done.update((n) => n + 1);
     }

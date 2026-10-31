@@ -3,9 +3,9 @@ import { AdminService, NewsRow } from '../../chatbot/admin.service';
 import { NEWS_CATEGORIES } from '../../core/content';
 import { SiteContentService } from '../../core/content.service';
 
-interface Draft { id?: string; title: string; category: string; date: string; excerpt: string; body: string; coverId: string; published: boolean }
+interface Draft { id?: string; title: string; category: string; date: string; excerpt: string; body: string; cover: string; coverId: string; published: boolean }
 const today = () => new Date().toISOString().slice(0, 10);
-const blank = (): Draft => ({ title: '', category: '', date: today(), excerpt: '', body: '', coverId: '', published: true });
+const blank = (): Draft => ({ title: '', category: '', date: today(), excerpt: '', body: '', cover: '', coverId: '', published: true });
 
 @Component({
   selector: 'app-news-admin',
@@ -15,7 +15,7 @@ const blank = (): Draft => ({ title: '', category: '', date: today(), excerpt: '
     @if (msg()) { <p [class]="bad() ? 'dx-err' : 'dx-ok'" role="status">{{ msg() }}</p> }
     @for (n of ad.news(); track n.id) {
       <article class="dx-row">
-        <div class="th">@if (n.coverId) { <img [src]="ad.mediaUrl(n.coverId)" alt="" loading="lazy"> } @else { <span aria-hidden="true">ॐ</span> }</div>
+        <div class="th">@if (n.cover) { <img [src]="n.cover" alt="" loading="lazy"> } @else { <span aria-hidden="true">ॐ</span> }</div>
         <div class="in">
           <h3>{{ n.title }}</h3>
           <p class="dx-meta">{{ fmt(n.date) }}@if (n.category) { · {{ n.category }} } <span class="dx-badge" [attr.data-s]="n.published ? 'ready' : 'draft'">{{ n.published ? 'Published' : 'Draft' }}</span></p>
@@ -40,8 +40,8 @@ const blank = (): Draft => ({ title: '', category: '', date: today(), excerpt: '
           <input type="date" [value]="d().date" (input)="set('date', $any($event.target).value)"></label>
       </div>
       <div class="dx-field">Cover photo (optional)
-        @if (d().coverId) {
-          <div class="cov"><img [src]="ad.mediaUrl(d().coverId)" alt="Cover preview"><button type="button" class="dx-sm del" (click)="dropCover()">Hatayein</button></div>
+        @if (d().cover) {
+          <div class="cov"><img [src]="d().cover" alt="Cover preview"><button type="button" class="dx-sm del" (click)="dropCover()">Hatayein</button></div>
         }
         <input type="file" accept="image/jpeg,image/png,image/webp" (change)="pick($event)" [disabled]="up()">
         @if (up()) { <span class="dx-hint">Photo chhoti karke upload ho rahi hai…</span> }
@@ -66,7 +66,6 @@ export class NewsAdminComponent implements OnInit {
   cats = NEWS_CATEGORIES;
   editing = signal(false); d = signal<Draft>(blank());
   busy = signal(false); up = signal(false); msg = signal(''); bad = signal(false);
-  private original = '';
 
   ngOnInit() { void this.load(); }
   private async load() { try { await this.ad.loadNews(); } catch (e) { this.say((e as Error).message, true); } }
@@ -74,20 +73,18 @@ export class NewsAdminComponent implements OnInit {
   set<K extends keyof Draft>(k: K, v: Draft[K]) { this.d.update((x) => ({ ...x, [k]: v })); }
   fmt = (iso: string) => { const t = new Date(iso + 'T00:00:00'); return isNaN(+t) ? iso : t.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); };
 
-  add() { this.d.set(blank()); this.original = ''; this.msg.set(''); this.editing.set(true); }
-  edit(n: NewsRow) { this.d.set({ id: n.id, title: n.title, category: n.category, date: n.date, excerpt: n.excerpt, body: n.body, coverId: n.coverId, published: n.published }); this.original = n.coverId; this.msg.set(''); this.editing.set(true); }
-  cancel() { this.dropUnsaved(); this.editing.set(false); this.msg.set(''); }
-  /** A cover uploaded in this editor but never saved would stay behind as clutter, so remove it. */
-  private dropUnsaved() { const c = this.d().coverId; if (c && c !== this.original) void this.ad.discardImage(c); }
+  add() { this.d.set(blank()); this.msg.set(''); this.editing.set(true); }
+  edit(n: NewsRow) { this.d.set({ id: n.id, title: n.title, category: n.category, date: n.date, excerpt: n.excerpt, body: n.body, cover: n.cover ?? '', coverId: n.coverId ?? '', published: n.published }); this.msg.set(''); this.editing.set(true); }
+  cancel() { this.editing.set(false); this.msg.set(''); }
 
   async pick(e: Event) {
     const el = e.target as HTMLInputElement, f = el.files?.[0]; if (!f) return;
     this.up.set(true); this.msg.set('');
-    try { const id = await this.ad.uploadImage(f); this.dropUnsaved(); this.set('coverId', id); }
+    try { const c = await this.ad.coverFromFile(f); this.d.update((x) => ({ ...x, cover: c, coverId: '' })); }
     catch (err) { this.say((err as Error).message, true); }
     this.up.set(false); el.value = '';
   }
-  dropCover() { this.dropUnsaved(); this.set('coverId', ''); }
+  dropCover() { this.d.update((x) => ({ ...x, cover: '', coverId: '' })); }
 
   async save() {
     if (!this.d().title.trim()) return this.say('Title likhiye.', true);

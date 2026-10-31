@@ -1,7 +1,30 @@
-// Only the chatbot server (Firebase Admin SDK) reads/writes Firestore. Browsers get nothing.
+// Website news / photos are read and written by the browser directly; the chatbot server uses the Admin SDK (rules do not apply to it).
+// ADMINS: put every admin email here in lower case (same people as ADMIN_EMAILS in chatbot-server/.env), then Publish the rules.
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email != null
+        && request.auth.token.email.lower() in ['kumarsaurabh95912@gmail.com'];
+    }
+
+    // News: visitors see only published items; admins see and edit everything.
+    match /site_news/{id} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow write: if isAdmin();
+    }
+    // Gallery previews are public.
+    match /site_gallery/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    // Full-size photos: anyone can open one by its id, but nobody can list them all except admins.
+    match /site_media/{id} {
+      allow get: if true;
+      allow list, write: if isAdmin();
+    }
+
+    // Everything else (chatbot knowledge base ...) stays closed to browsers.
     match /{document=**} { allow read, write: if false; }
   }
 }
