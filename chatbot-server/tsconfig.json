@@ -8,10 +8,10 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "outDir": "dist"
+    "outDir": "dist",
+    "rootDir": "src"
   },
   "include": [
-    "src/server",
-    "scripts"
+    "src/server"
   ]
 }
